@@ -217,37 +217,42 @@ std::string getlineWithTab() {
 
 extern "C" char **_environ;
 
-// 读取 path.txt，获取批处理文件搜索目录（UTF-8+BOM）
+#include <windows.h>
+
+// 读取 path.txt，获取批处理文件搜索目录（UTF-8+BOM），优先在程序本体目录查找
 std::vector<std::string> getSearchPaths() {
     std::vector<std::string> paths;
-    const char* rcfile = "path.txt";
+    char exePath[MAX_PATH] = {0};
+    GetModuleFileNameA(NULL, exePath, MAX_PATH);
+    std::string exeDir = exePath;
+    size_t pos = exeDir.find_last_of("\\/");
+    if (pos != std::string::npos) exeDir = exeDir.substr(0, pos);
+    std::string rcfile = exeDir + "\\path.txt";
 #ifdef DEBUG
-    printf("[DEBUG] 打开配置文件: %s\n", rcfile);
+    printf("[DEBUG] 打开配置文件: %s\n", rcfile.c_str());
 #endif
-    FILE* fp = fopen(rcfile, "rb");
+    FILE* fp = fopen(rcfile.c_str(), "rb");
     if (!fp) {
 #ifdef DEBUG
         printf("[DEBUG] 未找到配置文件，尝试创建...\n");
 #endif
-        char cwd[MAX_PATH] = {0};
-        GetCurrentDirectoryA(MAX_PATH, cwd);
-        FILE* wf = fopen(rcfile, "wb");
+        FILE* wf = fopen(rcfile.c_str(), "wb");
         if (wf) {
             unsigned char bom[3] = {0xEF, 0xBB, 0xBF};
             fwrite(bom, 1, 3, wf);
-            fwrite(cwd, 1, strlen(cwd), wf);
+            fwrite(exeDir.c_str(), 1, exeDir.size(), wf);
             fwrite("\n", 1, 1, wf);
             fclose(wf);
 #ifdef DEBUG
-            printf("[DEBUG] 已写入当前目录到配置文件: %s\n", cwd);
+            printf("[DEBUG] 已写入本体目录到配置文件: %s\n", exeDir.c_str());
 #endif
         }
-        fp = fopen(rcfile, "rb");
+        fp = fopen(rcfile.c_str(), "rb");
         if (!fp) {
 #ifdef DEBUG
-            printf("[DEBUG] 读取配置文件仍失败，直接返回当前目录\n");
+            printf("[DEBUG] 读取配置文件仍失败，直接返回本体目录\n");
 #endif
-            paths.push_back(std::string(cwd));
+            paths.push_back(exeDir);
             return paths;
         }
     }
@@ -262,11 +267,10 @@ std::vector<std::string> getSearchPaths() {
 #endif
     }
     std::string content(buf + offset, n - offset);
-    size_t pos = 0;
-    while (pos < content.size()) {
-        size_t end = content.find('\n', pos);
-        std::string line = (end == std::string::npos) ? content.substr(pos) : content.substr(pos, end - pos);
-        // 修正：去除 BOM、空格、回车、换行
+    size_t p = 0;
+    while (p < content.size()) {
+        size_t end = content.find('\n', p);
+        std::string line = (end == std::string::npos) ? content.substr(p) : content.substr(p, end - p);
         while (!line.empty() && ((unsigned char)line[0] == 0xEF || (unsigned char)line[0] == 0xBB || (unsigned char)line[0] == 0xBF))
             line.erase(0, 1);
         while (!line.empty() && (line.back() == '\r' || line.back() == '\n' || line.back() == ' ')) line.pop_back();
@@ -278,7 +282,7 @@ std::vector<std::string> getSearchPaths() {
             paths.push_back(line);
         }
         if (end == std::string::npos) break;
-        pos = end + 1;
+        p = end + 1;
     }
     fclose(fp);
 #ifdef DEBUG
