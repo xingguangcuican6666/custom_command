@@ -1,4 +1,4 @@
-// ctcmd - Ö§³ÖÃüÁî/¶ÔÏó/·½·¨/Â·¾¶²¹È«£¨TabÂÖ»»£©£¬Åú´¦Àíµ÷ÓÃ£¬±äÁ¿Ìæ»»£¬¼òÌåÖĞÎÄÖÕ¶Ë
+// ctcmd - æ”¯æŒå‘½ä»¤/å¯¹è±¡/æ–¹æ³•/è·¯å¾„è¡¥å…¨ï¼ˆTabè½®æ¢ï¼‰ï¼Œæ‰¹å¤„ç†è°ƒç”¨ï¼Œå˜é‡æ›¿æ¢ï¼Œç®€ä½“ä¸­æ–‡ç»ˆç«¯
 #include <windows.h>
 #include <tlhelp32.h>
 #include <io.h>
@@ -11,12 +11,12 @@
 #include <conio.h>
 #include <algorithm>
 // #define DEBUG
-// ÄÚÖÃÃüÁî
+// å†…ç½®å‘½ä»¤
 const std::vector<std::string> builtin_cmds = {
     "cd", "set", "env", "print", "ls", "ps", "pkill", "help", "exit"
 };
 
-// TAB ²¹È«ÂÖ»»×´Ì¬
+// TAB è¡¥å…¨è½®æ¢çŠ¶æ€
 struct TabState {
     std::string last_line;
     std::vector<std::string> candidates;
@@ -24,7 +24,7 @@ struct TabState {
 };
 TabState g_tabState;
 
-// »ñÈ¡µ±Ç°Ä¿Â¼ÏÂËùÓĞÎÄ¼şºÍÎÄ¼ş¼ĞÃû£¨Ä¿Â¼ÃûÒÔ/½áÎ²£©
+// è·å–å½“å‰ç›®å½•ä¸‹æ‰€æœ‰æ–‡ä»¶å’Œæ–‡ä»¶å¤¹å
 std::vector<std::string> listAllFiles(const std::string& dir) {
     std::vector<std::string> files;
     WIN32_FIND_DATAA ffd;
@@ -42,16 +42,16 @@ std::vector<std::string> listAllFiles(const std::string& dir) {
     return files;
 }
 
-// Ç°ÖÃÉùÃ÷
+// å‰ç½®å£°æ˜
 std::vector<std::string> getSearchPaths();
 
-// TAB ²¹È«Ö÷Âß¼­£¨ÃüÁî¡¢¶ÔÏó¡¢·½·¨¡¢Â·¾¶£¬Ö§³Öcd/ls²ÎÊı²¹È«£¬TabÂÖ»»£©
+// TAB è¡¥å…¨ä¸»é€»è¾‘ï¼ˆå‘½ä»¤ã€å¯¹è±¡ã€æ–¹æ³•ã€è·¯å¾„ï¼Œæ”¯æŒcd/lså‚æ•°è¡¥å…¨ï¼ŒTabè½®æ¢ï¼‰
 std::string tabCompleteRotate(const std::string& line) {
     size_t pos = line.find_last_of(" \t");
     std::string prefix = (pos == std::string::npos) ? line : line.substr(pos + 1);
     std::vector<std::string> candidates;
 
-    // cd/ls Â·¾¶²¹È«
+    // cd/ls è·¯å¾„è¡¥å…¨
     if (line.substr(0, 3) == "cd " || line.substr(0, 3) == "ls ") {
         std::string arg = line.substr(3);
         std::string dir = ".";
@@ -70,10 +70,10 @@ std::string tabCompleteRotate(const std::string& line) {
             }
         }
     } else {
-        // ÃüÁî²¹È«
+        // å‘½ä»¤è¡¥å…¨
         for (const auto& cmd : builtin_cmds)
             if (cmd.find(prefix) == 0) candidates.push_back(cmd);
-        // ¶ÔÏó/·½·¨²¹È«
+        // å¯¹è±¡/æ–¹æ³•è¡¥å…¨
         std::vector<std::string> searchPaths = getSearchPaths();
         for (const auto& dir : searchPaths) {
             std::vector<std::string> objs = listAllFiles(dir);
@@ -86,17 +86,17 @@ std::string tabCompleteRotate(const std::string& line) {
                 }
             }
         }
-        // Â·¾¶²¹È«
+        // è·¯å¾„è¡¥å…¨
         std::vector<std::string> files = listAllFiles(".");
         for (const auto& f : files)
             if (f.find(prefix) == 0) candidates.push_back(f);
     }
 
-    // È¥ÖØ
+    // å»é‡
     std::sort(candidates.begin(), candidates.end());
     candidates.erase(std::unique(candidates.begin(), candidates.end()), candidates.end());
 
-    // ÂÖ»»Âß¼­
+    // è½®æ¢é€»è¾‘
     if (line != g_tabState.last_line || candidates != g_tabState.candidates) {
         g_tabState.last_line = line;
         g_tabState.candidates = candidates;
@@ -115,25 +115,25 @@ std::string tabCompleteRotate(const std::string& line) {
 
 #include <deque>
 
-// ÃüÁîÀúÊ·¹¦ÄÜ
+// å‘½ä»¤å†å²åŠŸèƒ½
 std::deque<std::string> g_history;
 int g_historyIdx = -1;
 
 #include <deque>
 
-// ¶ÁÈ¡Ò»ĞĞ£¬Ö§³Ö TAB ²¹È«¡¢·½Ïò¼üÀúÊ·¡¢×óÓÒÒÆ¶¯ÓëĞĞÄÚ±à¼­
+// è¯»å–ä¸€è¡Œï¼Œæ”¯æŒ TAB è¡¥å…¨ã€æ–¹å‘é”®å†å²ã€å·¦å³ç§»åŠ¨ä¸è¡Œå†…ç¼–è¾‘
 std::string getlineWithTab() {
     std::string line;
     int ch;
     int cursor = 0;
-    g_tabState = TabState(); // Ã¿´ÎĞÂÊäÈëÖØÖÃÂÖ»»×´Ì¬
+    g_tabState = TabState(); // æ¯æ¬¡æ–°è¾“å…¥é‡ç½®è½®æ¢çŠ¶æ€
     g_historyIdx = -1;
     while ((ch = _getch()) != '\r') {
         if (ch == '\b') {
             if (cursor > 0) {
                 line.erase(cursor - 1, 1);
                 cursor--;
-                // »ØÏÔ
+                // å›æ˜¾
                 std::cout << "\b";
                 for (size_t i = cursor; i < line.size(); ++i) std::cout << line[i];
                 std::cout << " ";
@@ -145,20 +145,18 @@ std::string getlineWithTab() {
             if (completed != line) {
                 line = completed;
                 cursor = line.size();
-                // »ØÏÔ
+                // å›æ˜¾
                 std::cout << "\r";
-                // ÖØĞÂ´òÓ¡ÌáÊ¾·ûºÍĞĞÄÚÈİ
-                // ÓÉÓÚÖ÷Ñ­»·ÍâÒÑ´òÓ¡ cwd>£¬ÕâÀïÖ»ĞèË¢ĞÂĞĞÄÚÈİ
                 std::cout << line;
             }
         } else if (ch == 3) { // Ctrl+C
             exit(0);
-        } else if (ch == 224) { // ·½Ïò¼ü
+        } else if (ch == 224) { // æ–¹å‘é”®
             int arrow = _getch();
-            if (arrow == 72) { // ÉÏ
+            if (arrow == 72) { // ä¸Š
                 if (!g_history.empty() && g_historyIdx + 1 < (int)g_history.size()) {
                     g_historyIdx++;
-                    // Çå³ıµ±Ç°ĞĞ
+                    // æ¸…é™¤å½“å‰è¡Œ
                     for (int i = 0; i < cursor; ++i) std::cout << "\b";
                     for (size_t i = 0; i < line.size(); ++i) std::cout << " ";
                     for (size_t i = 0; i < line.size(); ++i) std::cout << "\b";
@@ -167,7 +165,7 @@ std::string getlineWithTab() {
                     std::cout << line;
                     g_tabState = TabState();
                 }
-            } else if (arrow == 80) { // ÏÂ
+            } else if (arrow == 80) { // ä¸‹
                 if (g_historyIdx > 0) {
                     g_historyIdx--;
                     for (int i = 0; i < cursor; ++i) std::cout << "\b";
@@ -186,29 +184,29 @@ std::string getlineWithTab() {
                     cursor = 0;
                     g_tabState = TabState();
                 }
-            } else if (arrow == 75) { // ×ó
+            } else if (arrow == 75) { // å·¦
                 if (cursor > 0) {
                     std::cout << "\b";
                     cursor--;
                 }
-            } else if (arrow == 77) { // ÓÒ
+            } else if (arrow == 77) { // å³
                 if (cursor < (int)line.size()) {
                     std::cout << line[cursor];
                     cursor++;
                 }
             }
         } else {
-            // ²åÈëµ½¹â±ê´¦
+            // æ’å…¥åˆ°å…‰æ ‡å¤„
             line.insert(cursor, 1, (char)ch);
             for (size_t i = cursor; i < line.size(); ++i) std::cout << line[i];
             cursor++;
-            // ¹â±ê»ØÍËµ½ÕıÈ·Î»ÖÃ
+            // å…‰æ ‡å›é€€åˆ°æ­£ç¡®ä½ç½®
             for (size_t i = cursor; i < line.size(); ++i) std::cout << "\b";
             g_tabState = TabState();
         }
     }
     std::cout << std::endl;
-    // ±£´æÀúÊ·£¬¿ÕĞĞ²»±£´æ£¬ÖØ¸´Á¬ĞøÃüÁî²»±£´æ
+    // ä¿å­˜å†å²ï¼Œç©ºè¡Œä¸ä¿å­˜ï¼Œé‡å¤è¿ç»­å‘½ä»¤ä¸ä¿å­˜
     if (!line.empty() && (g_history.empty() || g_history.back() != line))
         g_history.push_back(line);
     if (g_history.size() > 100) g_history.pop_front();
@@ -219,7 +217,7 @@ extern "C" char **_environ;
 
 #include <windows.h>
 
-// ¶ÁÈ¡ path.txt£¬»ñÈ¡Åú´¦ÀíÎÄ¼şËÑË÷Ä¿Â¼£¨UTF-8+BOM£©£¬ÓÅÏÈÔÚ³ÌĞò±¾ÌåÄ¿Â¼²éÕÒ
+// è¯»å– path.txtï¼Œè·å–æ‰¹å¤„ç†æ–‡ä»¶æœç´¢ç›®å½•ï¼ˆUTF-8+BOMï¼‰ï¼Œä¼˜å…ˆåœ¨ç¨‹åºæœ¬ä½“ç›®å½•æŸ¥æ‰¾
 std::vector<std::string> getSearchPaths() {
     std::vector<std::string> paths;
     char exePath[MAX_PATH] = {0};
@@ -229,12 +227,12 @@ std::vector<std::string> getSearchPaths() {
     if (pos != std::string::npos) exeDir = exeDir.substr(0, pos);
     std::string rcfile = exeDir + "\\path.txt";
 #ifdef DEBUG
-    printf("[DEBUG] ´ò¿ªÅäÖÃÎÄ¼ş: %s\n", rcfile.c_str());
+    printf("[DEBUG] æ‰“å¼€é…ç½®æ–‡ä»¶: %s\n", rcfile.c_str());
 #endif
     FILE* fp = fopen(rcfile.c_str(), "rb");
     if (!fp) {
 #ifdef DEBUG
-        printf("[DEBUG] Î´ÕÒµ½ÅäÖÃÎÄ¼ş£¬³¢ÊÔ´´½¨...\n");
+        printf("[DEBUG] æœªæ‰¾åˆ°é…ç½®æ–‡ä»¶ï¼Œå°è¯•åˆ›å»º...\n");
 #endif
         FILE* wf = fopen(rcfile.c_str(), "wb");
         if (wf) {
@@ -244,13 +242,13 @@ std::vector<std::string> getSearchPaths() {
             fwrite("\n", 1, 1, wf);
             fclose(wf);
 #ifdef DEBUG
-            printf("[DEBUG] ÒÑĞ´Èë±¾ÌåÄ¿Â¼µ½ÅäÖÃÎÄ¼ş: %s\n", exeDir.c_str());
+            printf("[DEBUG] å·²å†™å…¥æœ¬ä½“ç›®å½•åˆ°é…ç½®æ–‡ä»¶: %s\n", exeDir.c_str());
 #endif
         }
         fp = fopen(rcfile.c_str(), "rb");
         if (!fp) {
 #ifdef DEBUG
-            printf("[DEBUG] ¶ÁÈ¡ÅäÖÃÎÄ¼şÈÔÊ§°Ü£¬Ö±½Ó·µ»Ø±¾ÌåÄ¿Â¼\n");
+            printf("[DEBUG] è¯»å–é…ç½®æ–‡ä»¶ä»å¤±è´¥ï¼Œç›´æ¥è¿”å›æœ¬ä½“ç›®å½•\n");
 #endif
             paths.push_back(exeDir);
             return paths;
@@ -263,7 +261,7 @@ std::vector<std::string> getSearchPaths() {
     if (n >= 3 && (unsigned char)buf[0] == 0xEF && (unsigned char)buf[1] == 0xBB && (unsigned char)buf[2] == 0xBF) {
         offset = 3;
 #ifdef DEBUG
-        printf("[DEBUG] ¼ì²âµ½BOM£¬ÒÑÌø¹ı\n");
+        printf("[DEBUG] æ£€æµ‹åˆ°BOMï¼Œå·²è·³è¿‡\n");
 #endif
     }
     std::string content(buf + offset, n - offset);
@@ -277,7 +275,7 @@ std::vector<std::string> getSearchPaths() {
         while (!line.empty() && (line.front() == ' ')) line.erase(0, 1);
         if (!line.empty()) {
 #ifdef DEBUG
-            printf("[DEBUG] ¶ÁÈ¡µ½Â·¾¶: %s\n", line.c_str());
+            printf("[DEBUG] è¯»å–åˆ°è·¯å¾„: %s\n", line.c_str());
 #endif
             paths.push_back(line);
         }
@@ -286,12 +284,12 @@ std::vector<std::string> getSearchPaths() {
     }
     fclose(fp);
 #ifdef DEBUG
-    printf("[DEBUG] Â·¾¶ÁĞ±í×ÜÊı: %d\n", (int)paths.size());
+    printf("[DEBUG] è·¯å¾„åˆ—è¡¨æ€»æ•°: %d\n", (int)paths.size());
 #endif
     return paths;
 }
 
-// ½âÎö²ÎÊı
+// è§£æå‚æ•°
 std::vector<std::string> parseArgs(const std::string& params) {
     std::vector<std::string> args;
     size_t start = 0, end = 0;
@@ -304,7 +302,7 @@ std::vector<std::string> parseArgs(const std::string& params) {
     return args;
 }
 
-// »·¾³±äÁ¿Ìæ»»
+// ç¯å¢ƒå˜é‡æ›¿æ¢
 std::string replaceEnvVars(const std::string& input) {
     std::regex envPattern(R"(%(\w+)%|\$\{(\w+)\})");
     std::string result = input;
@@ -319,7 +317,7 @@ std::string replaceEnvVars(const std::string& input) {
     return result;
 }
 
-// ´òÓ¡»·¾³±äÁ¿
+// æ‰“å°ç¯å¢ƒå˜é‡
 void printEnv(const std::string& key = "") {
     if (key.empty()) {
         for (char **env = _environ; *env; ++env) {
@@ -330,16 +328,16 @@ void printEnv(const std::string& key = "") {
         if (val)
             std::cout << key << "=" << val << std::endl;
         else
-            std::cout << "»·¾³±äÁ¿Î´ÉèÖÃ: " << key << std::endl;
+            std::cout << "ç¯å¢ƒå˜é‡æœªè®¾ç½®: " << key << std::endl;
     }
 }
 
-// ÁĞ³öÄ¿Â¼
+// åˆ—å‡ºç›®å½•
 void listDir(const std::string& path = ".") {
     WIN32_FIND_DATAA ffd;
     HANDLE hFind = FindFirstFileA((path + "\\*").c_str(), &ffd);
     if (hFind == INVALID_HANDLE_VALUE) {
-        std::cout << "ÏµÍ³ÕÒ²»µ½Ö¸¶¨µÄÂ·¾¶: " << path << std::endl;
+        std::cout << "ç³»ç»Ÿæ‰¾ä¸åˆ°æŒ‡å®šçš„è·¯å¾„: " << path << std::endl;
         return;
     }
     do {
@@ -348,17 +346,17 @@ void listDir(const std::string& path = ".") {
     FindClose(hFind);
 }
 
-// ÁĞ³ö½ø³Ì
+// åˆ—å‡ºè¿›ç¨‹
 void listProcesses() {
     HANDLE hSnap = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
     if (hSnap == INVALID_HANDLE_VALUE) {
-        std::cout << "ÎŞ·¨»ñÈ¡½ø³ÌÁĞ±í" << std::endl;
+        std::cout << "æ— æ³•è·å–è¿›ç¨‹åˆ—è¡¨" << std::endl;
         return;
     }
     PROCESSENTRY32 pe;
     pe.dwSize = sizeof(pe);
     if (Process32First(hSnap, &pe)) {
-        std::cout << "PID\t½ø³ÌÃû" << std::endl;
+        std::cout << "PID\tè¿›ç¨‹å" << std::endl;
         do {
             char procName[MAX_PATH];
             size_t i = 0;
@@ -372,11 +370,11 @@ void listProcesses() {
     CloseHandle(hSnap);
 }
 
-// °´½ø³ÌÃûÉ±½ø³Ì
+// æŒ‰è¿›ç¨‹åæ€è¿›ç¨‹
 void killProcessByName(const std::string& name) {
     HANDLE hSnap = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
     if (hSnap == INVALID_HANDLE_VALUE) {
-        std::cout << "ÎŞ·¨»ñÈ¡½ø³ÌÁĞ±í" << std::endl;
+        std::cout << "æ— æ³•è·å–è¿›ç¨‹åˆ—è¡¨" << std::endl;
         return;
     }
     PROCESSENTRY32 pe;
@@ -394,9 +392,9 @@ void killProcessByName(const std::string& name) {
                 HANDLE hProc = OpenProcess(PROCESS_TERMINATE, FALSE, pe.th32ProcessID);
                 if (hProc) {
                     if (TerminateProcess(hProc, 0))
-                        std::cout << "ÒÑÖÕÖ¹½ø³Ì: " << procName << " (PID=" << pe.th32ProcessID << ")" << std::endl;
+                        std::cout << "å·²ç»ˆæ­¢è¿›ç¨‹: " << procName << " (PID=" << pe.th32ProcessID << ")" << std::endl;
                     else
-                        std::cout << "ÖÕÖ¹Ê§°Ü: " << procName << std::endl;
+                        std::cout << "ç»ˆæ­¢å¤±è´¥: " << procName << std::endl;
                     CloseHandle(hProc);
                 }
                 found = true;
@@ -404,26 +402,26 @@ void killProcessByName(const std::string& name) {
         } while (Process32Next(hSnap, &pe));
     }
     if (!found)
-        std::cout << "Î´ÕÒµ½½ø³Ì: " << name << std::endl;
+        std::cout << "æœªæ‰¾åˆ°è¿›ç¨‹: " << name << std::endl;
     CloseHandle(hSnap);
 }
 
-// ´¦Àíµ¥ÌõÃüÁî£¨ÃüÁîĞĞ²ÎÊıÄ£Ê½£©
+// å¤„ç†å•æ¡å‘½ä»¤ï¼ˆå‘½ä»¤è¡Œå‚æ•°æ¨¡å¼ï¼‰
 void handleSingleCommand(const std::string& cmdline) {
     std::string line = replaceEnvVars(cmdline);
 
-    // ÄÚ²¿ÃüÁî
+    // å†…éƒ¨å‘½ä»¤
     if (line == "help") {
-        std::cout << "ctcmd Ö§³ÖÈçÏÂÃüÁî£º" << std::endl;
-        std::cout << "  cd [Ä¿Â¼]         ÇĞ»»Ä¿Â¼" << std::endl;
-        std::cout << "  set KEY=VALUE     ÉèÖÃ»·¾³±äÁ¿" << std::endl;
-        std::cout << "  env [KEY]         ²é¿´»·¾³±äÁ¿" << std::endl;
-        std::cout << "  print ÄÚÈİ        Êä³öÄÚÈİ£¨Ö§³Ö±äÁ¿Ìæ»»£©" << std::endl;
-        std::cout << "  ls [Ä¿Â¼]         ÁĞ³öÄ¿Â¼ÄÚÈİ" << std::endl;
-        std::cout << "  ps                ²é¿´½ø³ÌÁĞ±í" << std::endl;
-        std::cout << "  pkill ½ø³ÌÃû      °´ÃûÉ±½ø³Ì" << std::endl;
-        std::cout << "  ¶ÔÏó.·½·¨(²ÎÊı)   µ÷ÓÃÅú´¦Àí£¨Èç power.shutdown(1)£©" << std::endl;
-        std::cout << "  exit              ÍË³öÖÕ¶Ë" << std::endl;
+        std::cout << "ctcmd æ”¯æŒå¦‚ä¸‹å‘½ä»¤ï¼š" << std::endl;
+        std::cout << "  cd [ç›®å½•]         åˆ‡æ¢ç›®å½•" << std::endl;
+        std::cout << "  set KEY=VALUE     è®¾ç½®ç¯å¢ƒå˜é‡" << std::endl;
+        std::cout << "  env [KEY]         æŸ¥çœ‹ç¯å¢ƒå˜é‡" << std::endl;
+        std::cout << "  print å†…å®¹        è¾“å‡ºå†…å®¹ï¼ˆæ”¯æŒå˜é‡æ›¿æ¢ï¼‰" << std::endl;
+        std::cout << "  ls [ç›®å½•]         åˆ—å‡ºç›®å½•å†…å®¹" << std::endl;
+        std::cout << "  ps                æŸ¥çœ‹è¿›ç¨‹åˆ—è¡¨" << std::endl;
+        std::cout << "  pkill è¿›ç¨‹å      æŒ‰åæ€è¿›ç¨‹" << std::endl;
+        std::cout << "  å¯¹è±¡.æ–¹æ³•(å‚æ•°)   è°ƒç”¨æ‰¹å¤„ç†ï¼ˆå¦‚ power.shutdown(1)ï¼‰" << std::endl;
+        std::cout << "  exit              é€€å‡ºç»ˆç«¯" << std::endl;
         return;
     }
     if (line == "ps") {
@@ -440,7 +438,7 @@ void handleSingleCommand(const std::string& cmdline) {
     }
     if (line.substr(0, 5) == "pkill") {
         if (line.length() == 5 || (line.length() == 6 && (line[5] == ' ' || line[5] == '\t'))) {
-            std::cout << "ÓÃ·¨: pkill ½ø³ÌÃû" << std::endl;
+            std::cout << "ç”¨æ³•: pkill è¿›ç¨‹å" << std::endl;
             return;
         }
         std::string name = line.substr(6);
@@ -459,12 +457,12 @@ void handleSingleCommand(const std::string& cmdline) {
         if (SetCurrentDirectoryA(path.c_str()))
             ;
         else
-            std::cout << "ÏµÍ³ÕÒ²»µ½Ö¸¶¨µÄÂ·¾¶: " << path << std::endl;
+            std::cout << "ç³»ç»Ÿæ‰¾ä¸åˆ°æŒ‡å®šçš„è·¯å¾„: " << path << std::endl;
         return;
     }
     if (line.substr(0, 3) == "set") {
         if (line.length() == 3 || (line.length() == 4 && (line[3] == ' ' || line[3] == '\t'))) {
-            std::cout << "ÓÃ·¨: set KEY=VALUE" << std::endl;
+            std::cout << "ç”¨æ³•: set KEY=VALUE" << std::endl;
             return;
         }
         if (line.substr(0, 4) == "set ") {
@@ -474,12 +472,12 @@ void handleSingleCommand(const std::string& cmdline) {
                 std::string val = line.substr(eq + 1);
                 if (SetEnvironmentVariableA(key.c_str(), val.c_str())) {
                     _putenv((key + "=" + val).c_str());
-                    std::cout << "ÒÑÉèÖÃ»·¾³±äÁ¿: " << key << "=" << val << std::endl;
+                    std::cout << "å·²è®¾ç½®ç¯å¢ƒå˜é‡: " << key << "=" << val << std::endl;
                 } else {
-                    std::cout << "ÉèÖÃ»·¾³±äÁ¿Ê§°Ü: " << key << std::endl;
+                    std::cout << "è®¾ç½®ç¯å¢ƒå˜é‡å¤±è´¥: " << key << std::endl;
                 }
             } else {
-                std::cout << "ÓÃ·¨: set KEY=VALUE" << std::endl;
+                std::cout << "ç”¨æ³•: set KEY=VALUE" << std::endl;
             }
             return;
         }
@@ -498,11 +496,11 @@ void handleSingleCommand(const std::string& cmdline) {
         return;
     }
 
-    // power.xxx(1,2,3) Óï·¨£¬Ö§³Ö path ÎÄ¼şÖ¸¶¨Ä¿Â¼
+    // power.xxx(1,2,3) è¯­æ³•ï¼Œæ”¯æŒ path æ–‡ä»¶æŒ‡å®šç›®å½•
     std::regex pattern(R"((\w+)\.(\w+)\((.*)\))");
     std::smatch match;
     if (!std::regex_match(line, match, pattern)) {
-        std::cout << cmdline << " ²»ÊÇÄÚ²¿»òÍâ²¿ÃüÁî£¬Ò²²»ÊÇ¿ÉÔËĞĞµÄ³ÌĞò»òÅú´¦ÀíÎÄ¼ş¡£" << std::endl;
+        std::cout << cmdline << " ä¸æ˜¯å†…éƒ¨æˆ–å¤–éƒ¨å‘½ä»¤ï¼Œä¹Ÿä¸æ˜¯å¯è¿è¡Œçš„ç¨‹åºæˆ–æ‰¹å¤„ç†æ–‡ä»¶ã€‚" << std::endl;
         return;
     }
     std::string object = match[1];
@@ -530,7 +528,7 @@ void handleSingleCommand(const std::string& cmdline) {
         }
     }
     if (!found) {
-        std::cout << "ÏµÍ³ÕÒ²»µ½Ö¸¶¨µÄÎÄ¼ş: " << object << "/" << method << ".bat" << std::endl;
+        std::cout << "ç³»ç»Ÿæ‰¾ä¸åˆ°æŒ‡å®šçš„æ–‡ä»¶: " << object << "/" << method << ".bat" << std::endl;
         return;
     }
 
@@ -548,7 +546,7 @@ void handleSingleCommand(const std::string& cmdline) {
         NULL, NULL, FALSE, 0, NULL, NULL, &si, &pi
     );
     if (!success) {
-        std::cout << "ÎŞ·¨Æô¶¯Åú´¦ÀíÎÄ¼ş: " << cmd << std::endl;
+        std::cout << "æ— æ³•å¯åŠ¨æ‰¹å¤„ç†æ–‡ä»¶: " << cmd << std::endl;
         return;
     }
     WaitForSingleObject(pi.hProcess, INFINITE);
@@ -561,29 +559,29 @@ int main(int argc, char* argv[]) {
     std::string homeDir = home ? home : "C:\\";
     std::regex pattern(R"((\w+)\.(\w+)\((.*)\))");
 
-    // ÃüÁîĞĞ²ÎÊıÄ£Ê½
+    // å‘½ä»¤è¡Œå‚æ•°æ¨¡å¼
     if (argc == 2) {
         std::string arg1 = argv[1];
         if (arg1 == "help") {
-            std::cout << "ctcmd Ö§³ÖÈçÏÂÃüÁî£º" << std::endl;
-            std::cout << "  cd [Ä¿Â¼]         ÇĞ»»Ä¿Â¼" << std::endl;
-            std::cout << "  set KEY=VALUE     ÉèÖÃ»·¾³±äÁ¿" << std::endl;
-            std::cout << "  env [KEY]         ²é¿´»·¾³±äÁ¿" << std::endl;
-            std::cout << "  print ÄÚÈİ        Êä³öÄÚÈİ£¨Ö§³Ö±äÁ¿Ìæ»»£©" << std::endl;
-            std::cout << "  ls [Ä¿Â¼]         ÁĞ³öÄ¿Â¼ÄÚÈİ" << std::endl;
-            std::cout << "  ps                ²é¿´½ø³ÌÁĞ±í" << std::endl;
-            std::cout << "  pkill ½ø³ÌÃû      °´ÃûÉ±½ø³Ì" << std::endl;
-            std::cout << "  ¶ÔÏó.·½·¨(²ÎÊı)   µ÷ÓÃÅú´¦Àí£¨Èç power.shutdown(1)£©" << std::endl;
-            std::cout << "  exit              ÍË³öÖÕ¶Ë" << std::endl;
+            std::cout << "ctcmd æ”¯æŒå¦‚ä¸‹å‘½ä»¤ï¼š" << std::endl;
+            std::cout << "  cd [ç›®å½•]         åˆ‡æ¢ç›®å½•" << std::endl;
+            std::cout << "  set KEY=VALUE     è®¾ç½®ç¯å¢ƒå˜é‡" << std::endl;
+            std::cout << "  env [KEY]         æŸ¥çœ‹ç¯å¢ƒå˜é‡" << std::endl;
+            std::cout << "  print å†…å®¹        è¾“å‡ºå†…å®¹ï¼ˆæ”¯æŒå˜é‡æ›¿æ¢ï¼‰" << std::endl;
+            std::cout << "  ls [ç›®å½•]         åˆ—å‡ºç›®å½•å†…å®¹" << std::endl;
+            std::cout << "  ps                æŸ¥çœ‹è¿›ç¨‹åˆ—è¡¨" << std::endl;
+            std::cout << "  pkill è¿›ç¨‹å      æŒ‰åæ€è¿›ç¨‹" << std::endl;
+            std::cout << "  å¯¹è±¡.æ–¹æ³•(å‚æ•°)   è°ƒç”¨æ‰¹å¤„ç†ï¼ˆå¦‚ power.shutdown(1)ï¼‰" << std::endl;
+            std::cout << "  exit              é€€å‡ºç»ˆç«¯" << std::endl;
             return 0;
         }
         handleSingleCommand(argv[1]);
         return 0;
     }
 
-    std::cout << "Custom CMD [°æ±¾ 1.1.0]" << std::endl;
-    std::cout << "(c) OracleLoadStar¡£±£ÁôËùÓĞÈ¨Àû¡£" << std::endl;
-    std::cout << "ctcmd - ×Ô¶¨ÒåÖÕ¶Ë£¬ÊäÈë help »ñÈ¡ÃüÁî°ïÖú¡£" << std::endl;
+    std::cout << "Custom CMD [ç‰ˆæœ¬ 1.1.0]" << std::endl;
+    std::cout << "(c) OracleLoadStarã€‚ä¿ç•™æ‰€æœ‰æƒåˆ©ã€‚" << std::endl;
+    std::cout << "ctcmd - è‡ªå®šä¹‰ç»ˆç«¯ï¼Œè¾“å…¥ help è·å–å‘½ä»¤å¸®åŠ©ã€‚" << std::endl;
     std::string line;
     while (true) {
         char cwd[MAX_PATH];
@@ -593,21 +591,21 @@ int main(int argc, char* argv[]) {
         if (line.empty()) continue;
         if (line == "exit") break;
 
-        // help ÃüÁî
+        // help å‘½ä»¤
         if (line == "help") {
-            std::cout << "ctcmd Ö§³ÖÈçÏÂÃüÁî£º" << std::endl;
-            std::cout << "  cd [Ä¿Â¼]         ÇĞ»»Ä¿Â¼" << std::endl;
-            std::cout << "  set KEY=VALUE     ÉèÖÃ»·¾³±äÁ¿" << std::endl;
-            std::cout << "  env [KEY]         ²é¿´»·¾³±äÁ¿" << std::endl;
-            std::cout << "  print ÄÚÈİ        Êä³öÄÚÈİ£¨Ö§³Ö±äÁ¿Ìæ»»£©" << std::endl;
-            std::cout << "  ls [Ä¿Â¼]         ÁĞ³öÄ¿Â¼ÄÚÈİ" << std::endl;
-            std::cout << "  ps                ²é¿´½ø³ÌÁĞ±í" << std::endl;
-            std::cout << "  pkill ½ø³ÌÃû      °´ÃûÉ±½ø³Ì" << std::endl;
-            std::cout << "  ¶ÔÏó.·½·¨(²ÎÊı)   µ÷ÓÃÅú´¦Àí£¨Èç power.shutdown(1)£©" << std::endl;
-            std::cout << "  exit              ÍË³öÖÕ¶Ë" << std::endl;
+            std::cout << "ctcmd æ”¯æŒå¦‚ä¸‹å‘½ä»¤ï¼š" << std::endl;
+            std::cout << "  cd [ç›®å½•]         åˆ‡æ¢ç›®å½•" << std::endl;
+            std::cout << "  set KEY=VALUE     è®¾ç½®ç¯å¢ƒå˜é‡" << std::endl;
+            std::cout << "  env [KEY]         æŸ¥çœ‹ç¯å¢ƒå˜é‡" << std::endl;
+            std::cout << "  print å†…å®¹        è¾“å‡ºå†…å®¹ï¼ˆæ”¯æŒå˜é‡æ›¿æ¢ï¼‰" << std::endl;
+            std::cout << "  ls [ç›®å½•]         åˆ—å‡ºç›®å½•å†…å®¹" << std::endl;
+            std::cout << "  ps                æŸ¥çœ‹è¿›ç¨‹åˆ—è¡¨" << std::endl;
+            std::cout << "  pkill è¿›ç¨‹å      æŒ‰åæ€è¿›ç¨‹" << std::endl;
+            std::cout << "  å¯¹è±¡.æ–¹æ³•(å‚æ•°)   è°ƒç”¨æ‰¹å¤„ç†ï¼ˆå¦‚ power.shutdown(1)ï¼‰" << std::endl;
+            std::cout << "  exit              é€€å‡ºç»ˆç«¯" << std::endl;
             continue;
         }
-        // cd ÃüÁî
+        // cd å‘½ä»¤
         if (line.substr(0, 2) == "cd") {
             std::string path = "";
             if (line.length() > 2 && (line[2] == ' ' || line[2] == '\t'))
@@ -617,14 +615,14 @@ int main(int argc, char* argv[]) {
             if (SetCurrentDirectoryA(path.c_str()))
                 ;
             else
-                std::cout << "ÏµÍ³ÕÒ²»µ½Ö¸¶¨µÄÂ·¾¶: " << path << std::endl;
+                std::cout << "ç³»ç»Ÿæ‰¾ä¸åˆ°æŒ‡å®šçš„è·¯å¾„: " << path << std::endl;
             continue;
         }
 
-        // set ÃüÁî
+        // set å‘½ä»¤
         if (line.substr(0, 3) == "set") {
             if (line.length() == 3 || (line.length() == 4 && (line[3] == ' ' || line[3] == '\t'))) {
-                std::cout << "ÓÃ·¨: set KEY=VALUE" << std::endl;
+                std::cout << "ç”¨æ³•: set KEY=VALUE" << std::endl;
                 continue;
             }
             if (line.substr(0, 4) == "set ") {
@@ -634,18 +632,18 @@ int main(int argc, char* argv[]) {
                     std::string val = line.substr(eq + 1);
                     if (SetEnvironmentVariableA(key.c_str(), val.c_str())) {
                         _putenv((key + "=" + val).c_str());
-                        std::cout << "ÒÑÉèÖÃ»·¾³±äÁ¿: " << key << "=" << val << std::endl;
+                        std::cout << "å·²è®¾ç½®ç¯å¢ƒå˜é‡: " << key << "=" << val << std::endl;
                     } else {
-                        std::cout << "ÉèÖÃ»·¾³±äÁ¿Ê§°Ü: " << key << std::endl;
+                        std::cout << "è®¾ç½®ç¯å¢ƒå˜é‡å¤±è´¥: " << key << std::endl;
                     }
                 } else {
-                    std::cout << "ÓÃ·¨: set KEY=VALUE" << std::endl;
+                    std::cout << "ç”¨æ³•: set KEY=VALUE" << std::endl;
                 }
                 continue;
             }
         }
 
-        // env ÃüÁî
+        // env å‘½ä»¤
         if (line.substr(0, 3) == "env") {
             if (line.length() == 3)
                 printEnv();
@@ -654,7 +652,7 @@ int main(int argc, char* argv[]) {
             continue;
         }
 
-        // print ÃüÁî
+        // print å‘½ä»¤
         if (line.substr(0, 6) == "print ") {
             std::string msg = line.substr(6);
             msg = replaceEnvVars(msg);
@@ -662,7 +660,7 @@ int main(int argc, char* argv[]) {
             continue;
         }
 
-        // ls ÃüÁî
+        // ls å‘½ä»¤
         if (line.substr(0, 2) == "ls") {
             std::string path = ".";
             if (line.length() > 2 && (line[2] == ' ' || line[2] == '\t'))
@@ -672,16 +670,16 @@ int main(int argc, char* argv[]) {
             continue;
         }
 
-        // ps ÃüÁî
+        // ps å‘½ä»¤
         if (line == "ps") {
             listProcesses();
             continue;
         }
 
-        // pkill ÃüÁî
+        // pkill å‘½ä»¤
         if (line.substr(0, 5) == "pkill") {
             if (line.length() == 5 || (line.length() == 6 && (line[5] == ' ' || line[5] == '\t'))) {
-                std::cout << "ÓÃ·¨: pkill ½ø³ÌÃû" << std::endl;
+                std::cout << "ç”¨æ³•: pkill è¿›ç¨‹å" << std::endl;
                 continue;
             }
             std::string name = line.substr(6);
@@ -690,12 +688,12 @@ int main(int argc, char* argv[]) {
             continue;
         }
 
-        // ±äÁ¿Ìæ»»
+        // å˜é‡æ›¿æ¢
         line = replaceEnvVars(line);
 
         std::smatch match;
         if (!std::regex_match(line, match, pattern)) {
-            std::cout << line << " ²»ÊÇÄÚ²¿»òÍâ²¿ÃüÁî£¬Ò²²»ÊÇ¿ÉÔËĞĞµÄ³ÌĞò»òÅú´¦ÀíÎÄ¼ş¡£" << std::endl;
+            std::cout << line << " ä¸æ˜¯å†…éƒ¨æˆ–å¤–éƒ¨å‘½ä»¤ï¼Œä¹Ÿä¸æ˜¯å¯è¿è¡Œçš„ç¨‹åºæˆ–æ‰¹å¤„ç†æ–‡ä»¶ã€‚" << std::endl;
             continue;
         }
         std::string object = match[1];
@@ -708,7 +706,7 @@ int main(int argc, char* argv[]) {
         bool found = false;
         for (const auto& dir : searchPaths) {
             batPath = dir;
-            // Â·¾¶Æ´½ÓÍ³Ò»ÓÃ·´Ğ±¸Ü
+            // è·¯å¾„æ‹¼æ¥ç»Ÿä¸€ç”¨åæ–œæ 
             if (batPath.back() != '\\' && batPath.back() != '/')
                 batPath += "\\";
             batPath += object + "\\" + method + ".bat";
@@ -724,7 +722,7 @@ int main(int argc, char* argv[]) {
             }
         }
         if (!found) {
-            std::cout << "ÏµÍ³ÕÒ²»µ½Ö¸¶¨µÄÎÄ¼ş: " << object << "/" << method << ".bat" << std::endl;
+            std::cout << "ç³»ç»Ÿæ‰¾ä¸åˆ°æŒ‡å®šçš„æ–‡ä»¶: " << object << "/" << method << ".bat" << std::endl;
             continue;
         }
 
@@ -742,13 +740,13 @@ int main(int argc, char* argv[]) {
             NULL, NULL, FALSE, 0, NULL, NULL, &si, &pi
         );
         if (!success) {
-            std::cout << "ÎŞ·¨Æô¶¯Åú´¦ÀíÎÄ¼ş: " << cmd << std::endl;
+            std::cout << "æ— æ³•å¯åŠ¨æ‰¹å¤„ç†æ–‡ä»¶: " << cmd << std::endl;
             continue;
         }
         WaitForSingleObject(pi.hProcess, INFINITE);
         CloseHandle(pi.hProcess);
         CloseHandle(pi.hThread);
     }
-    std::cout << "ÒÑÍË³ö ctcmd ÖÕ¶Ë¡£" << std::endl;
+    std::cout << "å·²é€€å‡º ctcmd ç»ˆç«¯ã€‚" << std::endl;
     return 0;
 }
