@@ -10,7 +10,7 @@
 #include <cstdio>
 #include <conio.h>
 #include <algorithm>
-
+// #define DEBUG
 // 内置命令
 const std::vector<std::string> builtin_cmds = {
     "cd", "set", "env", "print", "ls", "ps", "pkill", "help", "exit"
@@ -113,32 +113,105 @@ std::string tabCompleteRotate(const std::string& line) {
     return line;
 }
 
-// 读取一行，支持 TAB 补全（带轮换）
+#include <deque>
+
+// 命令历史功能
+std::deque<std::string> g_history;
+int g_historyIdx = -1;
+
+#include <deque>
+
+// 读取一行，支持 TAB 补全、方向键历史、左右移动与行内编辑
 std::string getlineWithTab() {
     std::string line;
     int ch;
+    int cursor = 0;
     g_tabState = TabState(); // 每次新输入重置轮换状态
+    g_historyIdx = -1;
     while ((ch = _getch()) != '\r') {
         if (ch == '\b') {
-            if (!line.empty()) {
-                line.pop_back();
-                std::cout << "\b \b";
+            if (cursor > 0) {
+                line.erase(cursor - 1, 1);
+                cursor--;
+                // 回显
+                std::cout << "\b";
+                for (size_t i = cursor; i < line.size(); ++i) std::cout << line[i];
+                std::cout << " ";
+                for (size_t i = cursor; i <= line.size(); ++i) std::cout << "\b";
                 g_tabState = TabState();
             }
         } else if (ch == '\t') {
             std::string completed = tabCompleteRotate(line);
             if (completed != line) {
                 line = completed;
+                cursor = line.size();
+                // 回显
+                std::cout << "\r";
+                // 重新打印提示符和行内容
+                // 由于主循环外已打印 cwd>，这里只需刷新行内容
+                std::cout << line;
             }
         } else if (ch == 3) { // Ctrl+C
             exit(0);
+        } else if (ch == 224) { // 方向键
+            int arrow = _getch();
+            if (arrow == 72) { // 上
+                if (!g_history.empty() && g_historyIdx + 1 < (int)g_history.size()) {
+                    g_historyIdx++;
+                    // 清除当前行
+                    for (int i = 0; i < cursor; ++i) std::cout << "\b";
+                    for (size_t i = 0; i < line.size(); ++i) std::cout << " ";
+                    for (size_t i = 0; i < line.size(); ++i) std::cout << "\b";
+                    line = g_history[g_history.size() - 1 - g_historyIdx];
+                    cursor = line.size();
+                    std::cout << line;
+                    g_tabState = TabState();
+                }
+            } else if (arrow == 80) { // 下
+                if (g_historyIdx > 0) {
+                    g_historyIdx--;
+                    for (int i = 0; i < cursor; ++i) std::cout << "\b";
+                    for (size_t i = 0; i < line.size(); ++i) std::cout << " ";
+                    for (size_t i = 0; i < line.size(); ++i) std::cout << "\b";
+                    line = g_history[g_history.size() - 1 - g_historyIdx];
+                    cursor = line.size();
+                    std::cout << line;
+                    g_tabState = TabState();
+                } else if (g_historyIdx == 0) {
+                    g_historyIdx = -1;
+                    for (int i = 0; i < cursor; ++i) std::cout << "\b";
+                    for (size_t i = 0; i < line.size(); ++i) std::cout << " ";
+                    for (size_t i = 0; i < line.size(); ++i) std::cout << "\b";
+                    line.clear();
+                    cursor = 0;
+                    g_tabState = TabState();
+                }
+            } else if (arrow == 75) { // 左
+                if (cursor > 0) {
+                    std::cout << "\b";
+                    cursor--;
+                }
+            } else if (arrow == 77) { // 右
+                if (cursor < (int)line.size()) {
+                    std::cout << line[cursor];
+                    cursor++;
+                }
+            }
         } else {
-            line += (char)ch;
-            std::cout << (char)ch;
+            // 插入到光标处
+            line.insert(cursor, 1, (char)ch);
+            for (size_t i = cursor; i < line.size(); ++i) std::cout << line[i];
+            cursor++;
+            // 光标回退到正确位置
+            for (size_t i = cursor; i < line.size(); ++i) std::cout << "\b";
             g_tabState = TabState();
         }
     }
     std::cout << std::endl;
+    // 保存历史，空行不保存，重复连续命令不保存
+    if (!line.empty() && (g_history.empty() || g_history.back() != line))
+        g_history.push_back(line);
+    if (g_history.size() > 100) g_history.pop_front();
     return line;
 }
 
@@ -193,7 +266,11 @@ std::vector<std::string> getSearchPaths() {
     while (pos < content.size()) {
         size_t end = content.find('\n', pos);
         std::string line = (end == std::string::npos) ? content.substr(pos) : content.substr(pos, end - pos);
-        while (!line.empty() && (line.back() == '\r' || line.back() == '\n')) line.pop_back();
+        // 修正：去除 BOM、空格、回车、换行
+        while (!line.empty() && ((unsigned char)line[0] == 0xEF || (unsigned char)line[0] == 0xBB || (unsigned char)line[0] == 0xBF))
+            line.erase(0, 1);
+        while (!line.empty() && (line.back() == '\r' || line.back() == '\n' || line.back() == ' ')) line.pop_back();
+        while (!line.empty() && (line.front() == ' ')) line.erase(0, 1);
         if (!line.empty()) {
 #ifdef DEBUG
             printf("[DEBUG] 读取到路径: %s\n", line.c_str());
@@ -627,9 +704,10 @@ int main(int argc, char* argv[]) {
         bool found = false;
         for (const auto& dir : searchPaths) {
             batPath = dir;
+            // 路径拼接统一用反斜杠
             if (batPath.back() != '\\' && batPath.back() != '/')
-                batPath += "/";
-            batPath += object + "/" + method + ".bat";
+                batPath += "\\";
+            batPath += object + "\\" + method + ".bat";
             if (_access(batPath.c_str(), 0) == 0) {
                 found = true;
                 break;
