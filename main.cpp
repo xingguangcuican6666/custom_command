@@ -1,4 +1,4 @@
-// ctcmd - 自定义终端主程序，支持类似 power.shutdown(1) 的批处理调用
+// ctcmd - 支持命令/对象/方法/路径补全（Tab轮换），批处理调用，变量替换，简体中文终端
 #include <windows.h>
 #include <tlhelp32.h>
 #include <io.h>
@@ -8,6 +8,139 @@
 #include <regex>
 #include <cstdlib>
 #include <cstdio>
+#include <conio.h>
+#include <algorithm>
+
+// 内置命令
+const std::vector<std::string> builtin_cmds = {
+    "cd", "set", "env", "print", "ls", "ps", "pkill", "help", "exit"
+};
+
+// TAB 补全轮换状态
+struct TabState {
+    std::string last_line;
+    std::vector<std::string> candidates;
+    size_t idx = 0;
+};
+TabState g_tabState;
+
+// 获取当前目录下所有文件和文件夹名（目录名以/结尾）
+std::vector<std::string> listAllFiles(const std::string& dir) {
+    std::vector<std::string> files;
+    WIN32_FIND_DATAA ffd;
+    HANDLE hFind = FindFirstFileA((dir + "\\*").c_str(), &ffd);
+    if (hFind == INVALID_HANDLE_VALUE) return files;
+    do {
+        if (strcmp(ffd.cFileName, ".") && strcmp(ffd.cFileName, "..")) {
+            std::string name = ffd.cFileName;
+            if (ffd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)
+                name += "/";
+            files.push_back(name);
+        }
+    } while (FindNextFileA(hFind, &ffd));
+    FindClose(hFind);
+    return files;
+}
+
+// 前置声明
+std::vector<std::string> getSearchPaths();
+
+// TAB 补全主逻辑（命令、对象、方法、路径，支持cd/ls参数补全，Tab轮换）
+std::string tabCompleteRotate(const std::string& line) {
+    size_t pos = line.find_last_of(" \t");
+    std::string prefix = (pos == std::string::npos) ? line : line.substr(pos + 1);
+    std::vector<std::string> candidates;
+
+    // cd/ls 路径补全
+    if (line.substr(0, 3) == "cd " || line.substr(0, 3) == "ls ") {
+        std::string arg = line.substr(3);
+        std::string dir = ".";
+        size_t slash = arg.find_last_of("/\\");
+        std::string base = arg;
+        if (slash != std::string::npos) {
+            dir = arg.substr(0, slash + 1);
+            base = arg.substr(slash + 1);
+        }
+        std::vector<std::string> files = listAllFiles(dir);
+        for (const auto& f : files) {
+            if (f.find(base) == 0) {
+                std::string full = dir == "." ? f : dir + f;
+                if (full.substr(0, 2) == "./") full = full.substr(2);
+                candidates.push_back(full);
+            }
+        }
+    } else {
+        // 命令补全
+        for (const auto& cmd : builtin_cmds)
+            if (cmd.find(prefix) == 0) candidates.push_back(cmd);
+        // 对象/方法补全
+        std::vector<std::string> searchPaths = getSearchPaths();
+        for (const auto& dir : searchPaths) {
+            std::vector<std::string> objs = listAllFiles(dir);
+            for (const auto& obj : objs) {
+                if (obj.find(prefix) == 0) candidates.push_back(obj);
+                std::vector<std::string> methods = listAllFiles(dir + "\\" + obj);
+                for (const auto& m : methods) {
+                    std::string full = obj + "." + m;
+                    if (full.find(prefix) == 0) candidates.push_back(full);
+                }
+            }
+        }
+        // 路径补全
+        std::vector<std::string> files = listAllFiles(".");
+        for (const auto& f : files)
+            if (f.find(prefix) == 0) candidates.push_back(f);
+    }
+
+    // 去重
+    std::sort(candidates.begin(), candidates.end());
+    candidates.erase(std::unique(candidates.begin(), candidates.end()), candidates.end());
+
+    // 轮换逻辑
+    if (line != g_tabState.last_line || candidates != g_tabState.candidates) {
+        g_tabState.last_line = line;
+        g_tabState.candidates = candidates;
+        g_tabState.idx = 0;
+    } else {
+        if (!candidates.empty())
+            g_tabState.idx = (g_tabState.idx + 1) % candidates.size();
+    }
+    if (!candidates.empty()) {
+        for (size_t i = 0; i < line.size(); ++i) std::cout << "\b \b";
+        std::cout << (pos == std::string::npos ? "" : line.substr(0, pos + 1)) + candidates[g_tabState.idx];
+        return (pos == std::string::npos ? "" : line.substr(0, pos + 1)) + candidates[g_tabState.idx];
+    }
+    return line;
+}
+
+// 读取一行，支持 TAB 补全（带轮换）
+std::string getlineWithTab() {
+    std::string line;
+    int ch;
+    g_tabState = TabState(); // 每次新输入重置轮换状态
+    while ((ch = _getch()) != '\r') {
+        if (ch == '\b') {
+            if (!line.empty()) {
+                line.pop_back();
+                std::cout << "\b \b";
+                g_tabState = TabState();
+            }
+        } else if (ch == '\t') {
+            std::string completed = tabCompleteRotate(line);
+            if (completed != line) {
+                line = completed;
+            }
+        } else if (ch == 3) { // Ctrl+C
+            exit(0);
+        } else {
+            line += (char)ch;
+            std::cout << (char)ch;
+            g_tabState = TabState();
+        }
+    }
+    std::cout << std::endl;
+    return line;
+}
 
 extern "C" char **_environ;
 
@@ -367,7 +500,7 @@ int main(int argc, char* argv[]) {
         return 0;
     }
 
-    std::cout << "Custom Cmd [版本 1.0.0]" << std::endl;
+    std::cout << "Custom CMD [版本 1.1.0]" << std::endl;
     std::cout << "(c) OracleLoadStar。保留所有权利。" << std::endl;
     std::cout << "ctcmd - 自定义终端，输入 help 获取命令帮助。" << std::endl;
     std::string line;
@@ -375,7 +508,7 @@ int main(int argc, char* argv[]) {
         char cwd[MAX_PATH];
         GetCurrentDirectoryA(MAX_PATH, cwd);
         std::cout << cwd << ">" << std::flush;
-        if (!std::getline(std::cin, line)) break;
+        line = getlineWithTab();
         if (line.empty()) continue;
         if (line == "exit") break;
 
