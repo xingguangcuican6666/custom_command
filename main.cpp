@@ -656,8 +656,8 @@ int main(int argc, char* argv[]) {
         return 0;
     }
 
-    std::cout << "Microsoft Windows [版本 10.0.26100.4946]" << std::endl;
-    std::cout << "(c) Microsoft Corporation。保留所有权利。" << std::endl;
+    std::cout << "Custom CMD [版本 10.0.26100.4946]" << std::endl;
+    std::cout << "(c) OracleLoadStar。保留所有权利。" << std::endl;
     std::cout << "ctcmd - 自定义终端，输入 help 获取命令帮助。" << std::endl;
     std::string line;
     while (true) {
