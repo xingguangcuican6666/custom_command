@@ -1,4 +1,4 @@
-// ctcmd - 全功能终端，支持命令/对象/方法/路径补全、批处理调用、变量替换、help 动态对象方法、DEBUG信息，编码UTF-8
+// ctcmd - 全功能终端，支持命令/对象/方法/路径补全、批处理调用、变量替换、help 动态对象方法、DEBUG信息，编码建议GBK
 #include <windows.h>
 #include <tlhelp32.h>
 #include <io.h>
@@ -12,17 +12,17 @@
 #include <conio.h>
 #include <algorithm>
 // #define DEBUG
- 
+
 const std::vector<std::string> builtin_cmds = {
     "cd", "set", "env", "print", "ls", "ps", "pkill", "help", "exit"
 };
- 
+
 #ifdef DEBUG
 #define DBG(x) do { std::cout << "[DEBUG] " << x << std::endl; } while(0)
 #else
 #define DBG(x)
 #endif
- 
+
 // 获取当前目录下所有文件和文件夹名（目录名以/结尾）
 std::vector<std::string> listAllFiles(const std::string& dir, bool onlyDir = false) {
     std::vector<std::string> files;
@@ -45,7 +45,7 @@ std::vector<std::string> listAllFiles(const std::string& dir, bool onlyDir = fal
     DBG("listAllFiles(" << dir << ") count=" << files.size());
     return files;
 }
- 
+
 // 读取 path.txt，获取批处理文件搜索目录（UTF-8+BOM），优先在程序本体目录查找
 std::vector<std::string> getSearchPaths() {
     std::vector<std::string> paths;
@@ -102,7 +102,7 @@ std::vector<std::string> getSearchPaths() {
     DBG("getSearchPaths count=" << paths.size());
     return paths;
 }
- 
+
 // TAB 补全主逻辑（命令、对象.方法、路径，支持cd/ls参数补全，Tab轮换）
 struct TabState {
     std::string last_line;
@@ -110,13 +110,13 @@ struct TabState {
     size_t idx = 0;
 };
 TabState g_tabState;
- 
+
 std::string tabCompleteRotate(const std::string& line) {
     if (line.empty()) return line;
     size_t pos = line.find_last_of(" \t");
     std::string prefix = (pos == std::string::npos) ? line : line.substr(pos + 1);
     std::vector<std::string> candidates;
- 
+
     // cd/ls 路径补全
     if (line.substr(0, 3) == "cd " || line.substr(0, 3) == "ls ") {
         std::string arg = line.substr(3);
@@ -163,10 +163,10 @@ std::string tabCompleteRotate(const std::string& line) {
         for (const auto& f : files)
             if (f.find(prefix) == 0) candidates.push_back(f);
     }
- 
+
     std::sort(candidates.begin(), candidates.end());
     candidates.erase(std::unique(candidates.begin(), candidates.end()), candidates.end());
- 
+
     if (line != g_tabState.last_line || candidates != g_tabState.candidates) {
         g_tabState.last_line = line;
         g_tabState.candidates = candidates;
@@ -185,12 +185,12 @@ std::string tabCompleteRotate(const std::string& line) {
     }
     return line;
 }
- 
+
 // 命令历史
 #include <deque>
 std::deque<std::string> g_history;
 int g_historyIdx = -1;
- 
+
 // 读取一行，支持 TAB 补全、方向键历史、左右移动与行内编辑
 std::string getlineWithTab() {
     std::string line;
@@ -212,9 +212,15 @@ std::string getlineWithTab() {
         } else if (ch == '\t') {
             std::string completed = tabCompleteRotate(line);
             if (completed != line) {
+                // 清除整行并重绘（包括提示符和补全内容）
+                char cwd[MAX_PATH];
+                GetCurrentDirectoryA(MAX_PATH, cwd);
+                std::cout << "\r";
+                size_t total_len = strlen(cwd) + 1 + line.size();
+                for (size_t i = 0; i < total_len; ++i) std::cout << " ";
+                std::cout << "\r" << cwd << ">" << completed;
                 line = completed;
                 cursor = line.size();
-                std::cout << "\r" << line;
             }
         } else if (ch == 3) {
             exit(0);
@@ -276,9 +282,9 @@ std::string getlineWithTab() {
     DBG("input: " << line);
     return line;
 }
- 
+
 extern "C" char **_environ;
- 
+
 // 环境变量替换
 std::string replaceEnvVars(const std::string& input) {
     std::regex envPattern(R"(%(\w+)%|\$\{(\w+)\})");
@@ -293,7 +299,7 @@ std::string replaceEnvVars(const std::string& input) {
     }
     return result;
 }
- 
+
 // 打印环境变量
 void printEnv(const std::string& key = "") {
     if (key.empty()) {
@@ -308,7 +314,7 @@ void printEnv(const std::string& key = "") {
             std::cout << "环境变量未设置: " << key << std::endl;
     }
 }
- 
+
 // 列出目录
 void listDir(const std::string& path = ".") {
     DBG("listDir: " << path);
@@ -323,7 +329,7 @@ void listDir(const std::string& path = ".") {
     } while (FindNextFileA(hFind, &ffd));
     FindClose(hFind);
 }
- 
+
 // 列出进程
 void listProcesses() {
     DBG("listProcesses");
@@ -348,7 +354,7 @@ void listProcesses() {
     }
     CloseHandle(hSnap);
 }
- 
+
 // 按进程名杀进程
 void killProcessByName(const std::string& name) {
     DBG("killProcessByName: " << name);
@@ -385,7 +391,7 @@ void killProcessByName(const std::string& name) {
         std::cout << "未找到进程: " << name << std::endl;
     CloseHandle(hSnap);
 }
- 
+
 // 解析参数
 std::vector<std::string> parseArgs(const std::string& params) {
     std::vector<std::string> args;
@@ -398,7 +404,7 @@ std::vector<std::string> parseArgs(const std::string& params) {
         args.push_back(params.substr(start));
     return args;
 }
- 
+
 // help 动态输出对象.方法及注释
 void printHelpObjects() {
     std::vector<std::string> searchPaths = getSearchPaths();
@@ -471,10 +477,10 @@ void printHelpObjects() {
         }
     }
 }
- 
+
 void handleSingleCommand(const std::string& cmdline) {
     std::string line = replaceEnvVars(cmdline);
- 
+
     if (line == "help") {
         std::cout << "ctcmd 支持如下命令：" << std::endl;
         std::cout << "  cd [目录]         切换目录" << std::endl;
@@ -565,7 +571,7 @@ void handleSingleCommand(const std::string& cmdline) {
         std::cout << msg << std::endl;
         return;
     }
- 
+
     // power.xxx(1,2,3) 语法，支持 path 文件指定目录
     std::regex pattern(R"((\w+)\.(\w+)\((.*)\))");
     std::smatch match;
@@ -577,7 +583,7 @@ void handleSingleCommand(const std::string& cmdline) {
     std::string method = match[2];
     std::string params = match[3];
     std::vector<std::string> args = parseArgs(params);
- 
+
     std::vector<std::string> searchPaths = getSearchPaths();
     std::string batPath;
     bool found = false;
@@ -601,13 +607,13 @@ void handleSingleCommand(const std::string& cmdline) {
         std::cout << "系统找不到指定的文件: " << object << "/" << method << ".bat" << std::endl;
         return;
     }
- 
+
     std::string cmd = "\"" + batPath + "\"";
     for (const auto& arg : args) {
         if (!arg.empty())
             cmd += " " + arg;
     }
- 
+
     DBG("run bat: " << cmd);
     STARTUPINFOA si = { sizeof(si) };
     PROCESS_INFORMATION pi;
@@ -624,12 +630,12 @@ void handleSingleCommand(const std::string& cmdline) {
     CloseHandle(pi.hProcess);
     CloseHandle(pi.hThread);
 }
- 
+
 int main(int argc, char* argv[]) {
     char* home = getenv("USERPROFILE");
     std::string homeDir = home ? home : "C:\\";
     std::regex pattern(R"((\w+)\.(\w+)\((.*)\))");
- 
+
     if (argc == 2) {
         std::string arg1 = argv[1];
         if (arg1 == "help") {
@@ -649,7 +655,7 @@ int main(int argc, char* argv[]) {
         handleSingleCommand(argv[1]);
         return 0;
     }
- 
+
     std::cout << "Microsoft Windows [版本 10.0.26100.4946]" << std::endl;
     std::cout << "(c) Microsoft Corporation。保留所有权利。" << std::endl;
     std::cout << "ctcmd - 自定义终端，输入 help 获取命令帮助。" << std::endl;
