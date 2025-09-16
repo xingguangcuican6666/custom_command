@@ -450,18 +450,14 @@ void printHelpObjects() {
                     std::vector<HelpEntry> entries;
                     size_t maxlen = 0;
                     for (const auto& m : methods) {
-                        std::string name = m;
-                        if (name == "help.json") continue;
-                        if (name.size() > 4 && name.substr(name.size() - 4) == ".bat")
-                            name = name.substr(0, name.size() - 4);
-                        if (!name.empty() && name.back() == '/')
-                            name.pop_back();
-                        if (!name.empty()) {
-                            std::string full = objName + "." + name;
-                            std::string comment = helpMap.count(name) ? helpMap[name] : "";
-                            entries.push_back({full, comment});
-                            if (full.size() > maxlen) maxlen = full.size();
-                        }
+                        // 只收集 .bat 文件，忽略文件夹和其它文件
+                        if (m.size() <= 4 || m.substr(m.size() - 4) != ".bat") continue;
+                        std::string name = m.substr(0, m.size() - 4);
+                        if (!name.empty() && name.back() == '/') continue; // 忽略目录
+                        std::string full = objName + "." + name;
+                        std::string comment = helpMap.count(name) ? helpMap[name] : "";
+                        entries.push_back({full, comment});
+                        if (full.size() > maxlen) maxlen = full.size();
                     }
                     // 统一对齐输出
                     for (const auto& e : entries) {
