@@ -188,8 +188,34 @@ std::string tabCompleteRotate(const std::string& line) {
 
 // 命令历史
 #include <deque>
+#include <fstream>
 std::deque<std::string> g_history;
 int g_historyIdx = -1;
+
+// 读取历史记录
+void loadHistory() {
+    char* home = getenv("USERPROFILE");
+    std::string histFile = home ? std::string(home) + "\\.ctcmd" : ".ctcmd";
+    std::ifstream fin(histFile, std::ios::in);
+    if (fin) {
+        std::string line;
+        while (std::getline(fin, line)) {
+            if (!line.empty()) g_history.push_back(line);
+        }
+        fin.close();
+    }
+}
+
+// 保存历史记录
+void saveHistory() {
+    char* home = getenv("USERPROFILE");
+    std::string histFile = home ? std::string(home) + "\\.ctcmd" : ".ctcmd";
+    std::ofstream fout(histFile, std::ios::out | std::ios::trunc);
+    if (fout) {
+        for (const auto& cmd : g_history) fout << cmd << std::endl;
+        fout.close();
+    }
+}
 
 // 读取一行，支持 TAB 补全、方向键历史、左右移动与行内编辑
 std::string getlineWithTab() {
@@ -276,9 +302,11 @@ std::string getlineWithTab() {
         }
     }
     std::cout << std::endl;
-    if (!line.empty() && (g_history.empty() || g_history.back() != line))
+    if (!line.empty() && (g_history.empty() || g_history.back() != line)) {
         g_history.push_back(line);
-    if (g_history.size() > 100) g_history.pop_front();
+        if (g_history.size() > 100) g_history.pop_front();
+        saveHistory();
+    }
     DBG("input: " << line);
     return line;
 }
@@ -656,6 +684,7 @@ int main(int argc, char* argv[]) {
     std::cout << "(c) OracleLoadStar。保留所有权利。" << std::endl;
     std::cout << "ctcmd - 自定义终端，输入 help 获取命令帮助。" << std::endl;
     std::string line;
+    loadHistory();
     while (true) {
         char cwd[MAX_PATH];
         GetCurrentDirectoryA(MAX_PATH, cwd);
@@ -667,6 +696,7 @@ int main(int argc, char* argv[]) {
         if (line == "exit") break;
         handleSingleCommand(line);
     }
-    std::cout << "已退出 ctcmd 终端。" << std::endl;
+    saveHistory();
+    // std::cout << "已退出 ctcmd 终端。" << std::endl;
     return 0;
 }
