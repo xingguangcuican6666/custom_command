@@ -2,7 +2,7 @@
 
 Ctcmd (全名 Custom Command) 是一个 Windows 下的自定义终端程序，支持类似 Java 风格的“对象.方法(参数)”语法调用批处理文件，并兼容常用命令和变量替换。并提供社区支持框架，该框架类似Ubuntu/Debian 的 apt，允许用户使用内置工具Winpt进行软件包下载和安装。
 
-使用文档：https://docs.oraclestar.cn/ctcmd/
+使用文档：https://docs.oraclestar.cn/docs/category/custom-terminal-command-ctcmd
 
 ## 功能特性
 
