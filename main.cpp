@@ -150,6 +150,8 @@ std::string tabCompleteRotate(const std::string& line) {
                     name = name.substr(0, name.size() - 4);
                 if (!name.empty() && name.back() == '/')
                     name.pop_back();
+                // 忽略 setup 和 uninstall
+                if (name == "setup" || name == "uninstall") continue;
                 if (name.find(methodPrefix) == 0)
                     candidates.push_back(obj + "." + name);
             }
@@ -482,6 +484,8 @@ void printHelpObjects() {
                         if (m.size() <= 4 || m.substr(m.size() - 4) != ".bat") continue;
                         std::string name = m.substr(0, m.size() - 4);
                         if (!name.empty() && name.back() == '/') continue; // 忽略目录
+                        // 忽略 setup.bat 和 uninstall.bat
+                        if (name == "setup" || name == "uninstall") continue;
                         std::string full = objName + "." + name;
                         std::string comment = helpMap.count(name) ? helpMap[name] : "";
                         entries.push_back({full, comment});
@@ -606,6 +610,13 @@ void handleSingleCommand(const std::string& cmdline) {
     std::string object = match[1];
     std::string method = match[2];
     std::string params = match[3];
+    
+    // 阻止调用 setup 和 uninstall
+    if (method == "setup" || method == "uninstall") {
+        std::cout << "错误: " << method << " 方法不可调用" << std::endl;
+        return;
+    }
+    
     std::vector<std::string> args = parseArgs(params);
 
     std::vector<std::string> searchPaths = getSearchPaths();
