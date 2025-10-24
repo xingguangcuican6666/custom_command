@@ -509,7 +509,7 @@ void printHelpObjects() {
 void handleSingleCommand(const std::string& cmdline) {
     std::string line = replaceEnvVars(cmdline);
 
-    if (line == "help") {
+    if (line == "help" || line == "你可以做什么" || line == "你能做什么" || line == "有什么功能" || line == "能做什么" || line == "帮助") {
         std::cout << "ctcmd 支持如下命令：" << std::endl;
         std::cout << "  cd [目录]         切换目录" << std::endl;
         std::cout << "  set KEY=VALUE     设置环境变量" << std::endl;
@@ -673,7 +673,7 @@ int main(int argc, char* argv[]) {
 
     if (argc == 2) {
         std::string arg1 = argv[1];
-        if (arg1 == "help") {
+        if (arg1 == "help" || arg1 == "你可以做什么" || arg1 == "你能做什么" || arg1 == "有什么功能" || arg1 == "能做什么" || arg1 == "帮助") {
             std::cout << "ctcmd 支持如下命令：" << std::endl;
             std::cout << "  cd [目录]         切换目录" << std::endl;
             std::cout << "  set KEY=VALUE     设置环境变量" << std::endl;
