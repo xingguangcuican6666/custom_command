@@ -5,7 +5,11 @@ call .\build.bat
 mkdir dist
 copy /Y .\temp\main.exe .\dist\ctcmd.exe
 curl https://raw.githubusercontent.com/xingguangcuican6666/ctcmd_repo/refs/heads/main/module/module_x86-64_latest.zip -o .\temp\temp.zip
-"C:\Program Files\ctcmd\module\tools\7z.exe" x .\temp\temp.zip -o.\dist\
+if not exist "C:\Program Files\ctcmd\module\tools\7z.exe" (
+    curl https://hk.gh-proxy.com/https://github.com/ip7z/7zip/releases/download/25.01/7z2501-x64.msi -o .\temp\7z.msi
+    msiexec /i 7z.msi /passive
+)
+"C:\Program Files\7-Zip\7z.exe" x .\temp\temp.zip -o.\dist\
 del .\temp\temp.zip
 cd dist
 mkdir .\module\cache
